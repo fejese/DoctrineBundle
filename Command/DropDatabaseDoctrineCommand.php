@@ -83,6 +83,29 @@ EOT
                 $name = $connection->getDatabasePlatform()->quoteSingleIdentifier($name);
             }
 
+            if (isset($params['dbname'])) {
+                $dbname = $params['dbname'];
+                unset($params['dbname']);
+                $connection->setParams($params);
+                $connection->close();
+
+                try {
+                    $databases = $connection->getSchemaManager()->listDatabases();
+
+                    if (!in_array($dbname, $databases)) {
+                        $output->writeln(sprintf('<info>Database for connection named <comment>%s</comment> does not exist so can not be dropped.</info>', $name));
+
+                        return;
+                    }
+                } catch (\Exception $e) {
+                    $output->writeln(sprintf('<info>Could not check if database exists for connection named <comment>%s</comment>. Trying to drop it anyway.</info>', $name));
+                }
+
+                $params['dbname'] = $dbname;
+                $connection->setParams($params);
+                $connection->close();
+            }
+
             try {
                 $connection->getSchemaManager()->dropDatabase($name);
                 $output->writeln(sprintf('<info>Dropped database for connection named <comment>%s</comment></info>', $name));
